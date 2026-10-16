@@ -2,8 +2,6 @@
 
 A mini spreadsheet engine in the browser: formulas, live dependency tracking and circular-reference detection, built without `eval`.
 
-**Live demo:** https://miniexcel.vercel.app
-
 ## Features
 
 **Core**
