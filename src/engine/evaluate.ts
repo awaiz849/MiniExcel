@@ -1,4 +1,4 @@
-import type { AstNode, CellError, CellValue } from '../types.ts'
+import type { AstNode, CellError, CellValue, CompareOperator } from '../types.ts'
 import { expandRange, parseAddress } from './refs.ts'
 import { FormulaError } from './tokenizer.ts'
 
@@ -6,16 +6,17 @@ export interface EvalContext {
   valueOf(address: string): CellValue
 }
 
-type Result = number | string
+type Result = number | string | boolean
 
 export function isError(value: CellValue): value is CellError {
   return typeof value === 'object' && value !== null
 }
 
-// Walks the tree and returns a number or text. Any problem throws a FormulaError.
+// Walks the tree and returns a number, text or TRUE/FALSE. Any problem throws a FormulaError.
 export function evaluate(node: AstNode, ctx: EvalContext): Result {
   switch (node.type) {
     case 'number':
+    case 'string':
       return node.value
 
     case 'ref':
@@ -46,20 +47,34 @@ export function evaluate(node: AstNode, ctx: EvalContext): Result {
       }
     }
 
+    case 'compare':
+      return compare(node.operator, evaluate(node.left, ctx), evaluate(node.right, ctx))
+
     case 'call': {
-      const fn = FUNCTIONS[node.name]
+      // IF only evaluates the branch it picks, so the other branch may contain an error.
+      if (node.name === 'IF') {
+        if (node.args.length !== 3) throw new FormulaError('#ERR')
+        const [condition, whenTrue, whenFalse] = node.args
+        return evaluate(toBoolean(evaluate(condition, ctx)) ? whenTrue : whenFalse, ctx)
+      }
+      const fn = NUMBER_FUNCTIONS[node.name]
       if (!fn) throw new FormulaError('#ERR')
       return fn(numbersIn(node.args, ctx))
     }
   }
 }
 
-const FUNCTIONS: Record<string, (numbers: number[]) => number> = {
-  SUM: (numbers) => numbers.reduce((total, n) => total + n, 0),
+const sum = (numbers: number[]) => numbers.reduce((total, n) => total + n, 0)
+
+const NUMBER_FUNCTIONS: Record<string, (numbers: number[]) => number> = {
+  SUM: sum,
   AVERAGE: (numbers) => {
     if (numbers.length === 0) throw new FormulaError('#DIV/0!')
-    return numbers.reduce((total, n) => total + n, 0) / numbers.length
+    return sum(numbers) / numbers.length
   },
+  MIN: (numbers) => (numbers.length === 0 ? 0 : Math.min(...numbers)),
+  MAX: (numbers) => (numbers.length === 0 ? 0 : Math.max(...numbers)),
+  COUNT: (numbers) => numbers.length,
 }
 
 // Value of one cell, with errors in that cell passed along. Empty -> null.
@@ -89,7 +104,38 @@ function numbersIn(args: AstNode[], ctx: EvalContext): number[] {
   return numbers
 }
 
+// Numbers compare as numbers, text compares ignoring case. Mixing them is only allowed for = and <>.
+function compare(operator: CompareOperator, left: Result, right: Result): boolean {
+  if (typeof left !== typeof right) {
+    if (operator === '=') return false
+    if (operator === '<>') return true
+    throw new FormulaError('#ERR')
+  }
+  const a = typeof left === 'string' ? left.toLowerCase() : left
+  const b = typeof right === 'string' ? right.toLowerCase() : right
+  switch (operator) {
+    case '=':
+      return a === b
+    case '<>':
+      return a !== b
+    case '<':
+      return a < b
+    case '>':
+      return a > b
+    case '<=':
+      return a <= b
+    case '>=':
+      return a >= b
+  }
+}
+
 function toNumber(value: Result): number {
+  if (typeof value === 'boolean') return value ? 1 : 0
   if (typeof value !== 'number') throw new FormulaError('#ERR')
   return value
+}
+
+function toBoolean(value: Result): boolean {
+  if (typeof value === 'string') throw new FormulaError('#ERR')
+  return Boolean(value)
 }

@@ -1,4 +1,4 @@
-import { Sheet } from 'lucide-react'
+import { Check, Sheet } from 'lucide-react'
 
 export function TopBar() {
   return (
@@ -9,6 +9,10 @@ export function TopBar() {
       <span className="text-[17px] font-bold tracking-tight text-slate-900">SheetCraft</span>
       <span className="hidden h-5 w-px bg-slate-200 sm:block" />
       <span className="hidden truncate text-sm text-slate-500 sm:block">Class 10 · Term 1 marks</span>
+      <span className="ml-auto flex items-center gap-1.5 text-xs text-slate-500">
+        <Check size={14} className="text-emerald-600" />
+        Autosaved
+      </span>
     </header>
   )
 }

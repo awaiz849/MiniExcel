@@ -1,3 +1,5 @@
+import type { SavedSheet } from '../types.ts'
+
 const STUDENTS: [string, number, number, number][] = [
   ['Aarav Patil', 78, 85, 72],
   ['Priya Deshmukh', 92, 88, 95],
@@ -13,8 +15,9 @@ const STUDENTS: [string, number, number, number][] = [
 
 // Class 10 marks sheet. Chains to try:
 //   B2 -> E2 (Total) -> E13 (class average) -> G2..G11 (vs class average)
-//   B16 -> C16 -> D16 -> E16
-function buildSeed(): Record<string, string> {
+//   B2 -> F2 (Average) -> H2 (Result)
+//   B19 -> C19 -> D19 -> E19
+function buildSeed(): SavedSheet {
   const cells: Record<string, string> = {
     A1: 'Student',
     B1: 'Maths',
@@ -23,6 +26,7 @@ function buildSeed(): Record<string, string> {
     E1: 'Total',
     F1: 'Average',
     G1: 'vs Class Avg',
+    H1: 'Result',
   }
 
   STUDENTS.forEach(([name, maths, physics, chemistry], i) => {
@@ -34,20 +38,30 @@ function buildSeed(): Record<string, string> {
     cells[`E${row}`] = `=SUM(B${row}:D${row})`
     cells[`F${row}`] = `=AVERAGE(B${row}:D${row})`
     cells[`G${row}`] = `=E${row}-E13`
+    cells[`H${row}`] = `=IF(F${row}>=75, "Distinction", "Pass")`
   })
 
-  cells.A13 = 'Class average'
-  for (const col of ['B', 'C', 'D', 'E', 'F']) cells[`${col}13`] = `=AVERAGE(${col}2:${col}11)`
-  cells.A14 = 'Class total'
-  cells.E14 = '=SUM(E2:E11)'
+  const summaries: [number, string, string][] = [
+    [13, 'Class average', 'AVERAGE'],
+    [14, 'Highest', 'MAX'],
+    [15, 'Lowest', 'MIN'],
+    [16, 'Students', 'COUNT'],
+  ]
+  for (const [row, label, fn] of summaries) {
+    cells[`A${row}`] = label
+    for (const col of ['B', 'C', 'D', 'E', 'F']) cells[`${col}${row}`] = `=${fn}(${col}2:${col}11)`
+  }
+  cells.A17 = 'Class total'
+  cells.E17 = '=SUM(E2:E11)'
 
-  cells.A16 = 'Chain: edit B16'
-  cells.B16 = '10'
-  cells.C16 = '=B16*2'
-  cells.D16 = '=C16+5'
-  cells.E16 = '=D16/5'
+  cells.A19 = 'Chain: edit B19'
+  cells.B19 = '10'
+  cells.C19 = '=B19*2'
+  cells.D19 = '=C19+5'
+  cells.E19 = '=D19/5'
 
-  return cells
+  const bold = ['A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1', 'A13', 'A14', 'A15', 'A16', 'A17', 'A19']
+  return { cells, bold }
 }
 
-export const SEED_CELLS = buildSeed()
+export const SEED: SavedSheet = buildSeed()

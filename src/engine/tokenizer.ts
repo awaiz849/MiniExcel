@@ -11,7 +11,9 @@ export class FormulaError extends Error {
 }
 
 const NUMBER = /^(\d+\.?\d*|\.\d+)/
+const STRING = /^"([^"]*)"/
 const WORD = /^[A-Za-z]+\d*/
+const COMPARE = /^(>=|<=|<>|>|<|=)/
 const SINGLE: Record<string, Token['kind']> = {
   '+': 'op',
   '-': 'op',
@@ -40,6 +42,20 @@ export function tokenize(source: string): Token[] {
     if (number) {
       tokens.push({ kind: 'number', text: number[0] })
       i += number[0].length
+      continue
+    }
+
+    const string = STRING.exec(rest)
+    if (string) {
+      tokens.push({ kind: 'string', text: string[1] })
+      i += string[0].length
+      continue
+    }
+
+    const compare = COMPARE.exec(rest)
+    if (compare) {
+      tokens.push({ kind: 'compare', text: compare[0] })
+      i += compare[0].length
       continue
     }
 

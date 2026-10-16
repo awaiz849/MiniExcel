@@ -6,10 +6,11 @@ interface FormulaBarProps {
   inputRef: RefObject<HTMLInputElement | null>
   onChange: (draft: string) => void
   onCommit: () => void
+  onSubmit: () => void
   onCancel: () => void
 }
 
-export function FormulaBar({ address, value, inputRef, onChange, onCommit, onCancel }: FormulaBarProps) {
+export function FormulaBar({ address, value, inputRef, onChange, onCommit, onSubmit, onCancel }: FormulaBarProps) {
   return (
     <div className="flex h-10 shrink-0 items-center border-b border-slate-200 bg-white">
       <div className="flex h-full w-16 shrink-0 items-center justify-center border-r border-slate-200 text-sm font-semibold text-slate-700 sm:w-20">
@@ -26,7 +27,7 @@ export function FormulaBar({ address, value, inputRef, onChange, onCommit, onCan
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
-            onCommit()
+            onSubmit()
           } else if (e.key === 'Escape') {
             onCancel()
           }

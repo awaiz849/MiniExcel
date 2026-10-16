@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { describe, test } from 'node:test'
 import { SheetEngine } from '../src/engine/sheet.ts'
+import { cellsFromCsv, toCsv } from '../src/lib/csv.ts'
 
 const err = (code: string) => ({ error: code })
 
@@ -157,6 +158,85 @@ describe('errors', () => {
   test('refs outside A1:J20 show #REF', () => {
     const sheet = new SheetEngine({ A1: '=K1', A2: '=A21+1', A3: '=A0', A4: '=SUM(A1:Z1)', A5: '=AA1' })
     for (const cell of ['A1', 'A2', 'A3', 'A4', 'A5']) assert.deepEqual(sheet.getValue(cell), err('#REF'), cell)
+  })
+})
+
+describe('MIN, MAX, COUNT and IF', () => {
+  test('MIN, MAX and COUNT over a range', () => {
+    const sheet = new SheetEngine({
+      A1: '40',
+      A2: '15',
+      A3: 'absent',
+      A4: '90',
+      B1: '=MIN(A1:A4)',
+      B2: '=MAX(A1:A4)',
+      B3: '=COUNT(A1:A4)',
+      B4: '=MAX(A6:A8)',
+    })
+    assert.equal(sheet.getValue('B1'), 15)
+    assert.equal(sheet.getValue('B2'), 90)
+    assert.equal(sheet.getValue('B3'), 3)
+    assert.equal(sheet.getValue('B4'), 0)
+  })
+
+  test('comparisons return TRUE/FALSE', () => {
+    const sheet = new SheetEngine({
+      A1: '5',
+      B1: '=A1>3',
+      B2: '=A1<3',
+      B3: '=A1>=5',
+      B4: '=A1<=4',
+      B5: '=A1=5',
+      B6: '=A1<>5',
+      B7: '="abc"="ABC"',
+      B8: '=A1+1>A1*1',
+    })
+    assert.deepEqual(
+      ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8'].map((c) => sheet.getValue(c)),
+      [true, false, true, false, true, false, true, true],
+    )
+  })
+
+  test('IF picks a branch, returns text, and recomputes when its input changes', () => {
+    const sheet = new SheetEngine({ A1: '72', B1: '=IF(A1>=75, "Distinction", "Pass")', C1: '=IF(A1>50, A1*2, 0)' })
+    assert.equal(sheet.getValue('B1'), 'Pass')
+    assert.equal(sheet.getValue('C1'), 144)
+    sheet.setCell('A1', '80')
+    assert.equal(sheet.getValue('B1'), 'Distinction')
+  })
+
+  test('IF only evaluates the chosen branch; wrong arity is #ERR', () => {
+    const sheet = new SheetEngine({ A1: '=IF(1>0, 7, 1/0)', A2: '=IF(1>0, 7)', A3: '=IF("x", 1, 2)' })
+    assert.equal(sheet.getValue('A1'), 7)
+    assert.deepEqual(sheet.getValue('A2'), err('#ERR'))
+    assert.deepEqual(sheet.getValue('A3'), err('#ERR'))
+  })
+})
+
+describe('trace and CSV', () => {
+  test('precedentsOf and dependentsOf follow the graph', () => {
+    const sheet = new SheetEngine({ A1: '1', B1: '=A1', C1: '=B1+A1', D1: '=SUM(A1:B1)' })
+    assert.deepEqual(sheet.precedentsOf('C1').sort(), ['A1', 'B1'])
+    assert.deepEqual(sheet.dependentsOf('A1').sort(), ['B1', 'C1', 'D1'])
+    assert.deepEqual(sheet.dependentsOf('D1'), [])
+  })
+
+  test('CSV round trip keeps formulas, commas and quotes', () => {
+    const cells = { A1: 'Name', B1: 'Marks', A2: 'Patil, Aarav', B2: '78', A3: 'Say "hi"', B3: '=SUM(B2:B2)' }
+    const csv = toCsv(cells)
+    assert.equal(csv.split('\r\n')[1], '"Patil, Aarav",78')
+    const { cells: back, truncated } = cellsFromCsv(csv)
+    assert.deepEqual(back, cells)
+    assert.equal(truncated, false)
+    assert.equal(new SheetEngine(back).getValue('B3'), 78)
+  })
+
+  test('CSV import drops data outside J20 and reports it', () => {
+    const wide = Array.from({ length: 12 }, (_, i) => String(i)).join(',')
+    const { cells, truncated } = cellsFromCsv(wide)
+    assert.equal(truncated, true)
+    assert.equal(cells.J1, '9')
+    assert.equal(Object.keys(cells).length, 10)
   })
 })
 

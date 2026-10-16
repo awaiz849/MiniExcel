@@ -52,6 +52,16 @@ export class SheetEngine {
     return this.values.get(address) ?? null
   }
 
+  // Cells this cell's formula reads directly.
+  precedentsOf(address: string): string[] {
+    return [...(this.deps.get(address) ?? [])]
+  }
+
+  // Every cell that would change if this one changed, through any length of chain.
+  dependentsOf(address: string): string[] {
+    return this.withDependents(address).filter((cell) => cell !== address)
+  }
+
   toJSON(): Record<string, string> {
     return Object.fromEntries(this.raw)
   }
@@ -156,6 +166,7 @@ export class SheetEngine {
 function referencedCells(node: AstNode): string[] {
   switch (node.type) {
     case 'number':
+    case 'string':
       return []
     case 'ref':
       return parseAddress(node.address) ? [node.address] : []
@@ -164,6 +175,7 @@ function referencedCells(node: AstNode): string[] {
     case 'unary':
       return referencedCells(node.operand)
     case 'binary':
+    case 'compare':
       return [...referencedCells(node.left), ...referencedCells(node.right)]
     case 'call':
       return node.args.flatMap(referencedCells)

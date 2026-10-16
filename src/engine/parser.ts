@@ -1,11 +1,12 @@
-import type { AstNode, Token } from '../types.ts'
+import type { AstNode, CompareOperator, Token } from '../types.ts'
 import { FormulaError, tokenize } from './tokenizer.ts'
 
 // Recursive descent. Each function handles one precedence level, lowest first:
+//   comparison := expression (('=' | '<>' | '<' | '>' | '<=' | '>=') expression)?
 //   expression := term (('+' | '-') term)*
 //   term       := unary (('*' | '/') unary)*
 //   unary      := ('-' | '+') unary | primary
-//   primary    := number | ref (':' ref)? | NAME '(' args ')' | '(' expression ')'
+//   primary    := number | "text" | ref (':' ref)? | NAME '(' args ')' | '(' comparison ')'
 export function parseFormula(source: string): AstNode {
   const tokens = tokenize(source)
   let pos = 0
@@ -22,6 +23,13 @@ export function parseFormula(source: string): AstNode {
     if (!token || token.kind !== kind) throw new FormulaError('#ERR')
     pos++
     return token
+  }
+
+  function comparison(): AstNode {
+    const left = expression()
+    if (peek()?.kind !== 'compare') return left
+    const operator = tokens[pos++].text as CompareOperator
+    return { type: 'compare', operator, left, right: expression() }
   }
 
   function expression(): AstNode {
@@ -59,6 +67,11 @@ export function parseFormula(source: string): AstNode {
       return { type: 'number', value: Number(token.text) }
     }
 
+    if (token.kind === 'string') {
+      pos++
+      return { type: 'string', value: token.text }
+    }
+
     if (token.kind === 'ref') {
       pos++
       if (peek()?.kind === ':') {
@@ -73,10 +86,10 @@ export function parseFormula(source: string): AstNode {
       expect('(')
       const args: AstNode[] = []
       if (peek()?.kind !== ')') {
-        args.push(expression())
+        args.push(comparison())
         while (peek()?.kind === ',') {
           pos++
-          args.push(expression())
+          args.push(comparison())
         }
       }
       expect(')')
@@ -85,7 +98,7 @@ export function parseFormula(source: string): AstNode {
 
     if (token.kind === '(') {
       pos++
-      const inner = expression()
+      const inner = comparison()
       expect(')')
       return inner
     }
@@ -93,7 +106,7 @@ export function parseFormula(source: string): AstNode {
     throw new FormulaError('#ERR')
   }
 
-  const ast = expression()
+  const ast = comparison()
   if (pos < tokens.length) throw new FormulaError('#ERR')
   return ast
 }
