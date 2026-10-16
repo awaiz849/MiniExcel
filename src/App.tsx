@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState, type ChangeEvent, type Keyboard
 import { ConfirmDialog } from './components/ConfirmDialog.tsx'
 import { FormulaBar } from './components/FormulaBar.tsx'
 import { Grid } from './components/Grid.tsx'
+import { SheetTabs } from './components/SheetTabs.tsx'
 import { StatusBar } from './components/StatusBar.tsx'
 import { Toasts } from './components/Toasts.tsx'
 import { Toolbar } from './components/Toolbar.tsx'
@@ -281,6 +282,7 @@ export default function App() {
         onEditorKey={handleEditorKey}
         onCommit={commit}
       />
+      <SheetTabs />
       <StatusBar
         selected={selected}
         value={engine.getValue(selected)}

@@ -3,7 +3,7 @@ import type { Toast } from '../types.ts'
 
 export function Toasts({ toasts }: { toasts: Toast[] }) {
   return (
-    <div className="pointer-events-none fixed right-4 bottom-12 left-4 z-50 flex flex-col items-end gap-2" aria-live="polite">
+    <div className="pointer-events-none fixed right-4 bottom-20 left-4 z-50 flex flex-col items-end gap-2" aria-live="polite">
       {toasts.map((toast) => (
         <div
           key={toast.id}

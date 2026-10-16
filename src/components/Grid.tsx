@@ -58,13 +58,15 @@ export function Grid(props: GridProps) {
 
         <thead>
           <tr>
-            <th className="sticky top-0 left-0 z-30 h-7 border-r border-b border-slate-200 bg-slate-100" />
+            <th className="sticky top-0 left-0 z-30 h-7 border-r border-b border-slate-200 bg-slate-50" />
             {columns.map((col) => (
               <th
                 key={col}
                 scope="col"
-                className={`sticky top-0 z-20 h-7 border-r border-b border-slate-200 text-xs font-medium ${
-                  active?.col === col ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                className={`sticky top-0 z-20 h-7 border-r border-b border-slate-200 text-[11px] font-semibold tracking-wide transition-colors duration-150 ${
+                  active?.col === col
+                    ? 'bg-emerald-50 text-emerald-700 shadow-[inset_0_-2px_0_var(--color-emerald-600)]'
+                    : 'bg-slate-50 text-slate-500'
                 }`}
               >
                 {columnLetter(col)}
@@ -75,11 +77,13 @@ export function Grid(props: GridProps) {
 
         <tbody>
           {rows.map((row) => (
-            <tr key={row}>
+            <tr key={row} className="group">
               <th
                 scope="row"
-                className={`sticky left-0 z-10 h-8 border-r border-b border-slate-200 text-xs font-medium ${
-                  active?.row === row ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                className={`sticky left-0 z-10 h-8 border-r border-b border-slate-200 text-[11px] font-semibold tabular-nums transition-colors duration-150 ${
+                  active?.row === row
+                    ? 'bg-emerald-50 text-emerald-700 shadow-[inset_-2px_0_0_var(--color-emerald-600)]'
+                    : 'bg-slate-50 text-slate-500'
                 }`}
               >
                 {row + 1}
@@ -90,11 +94,14 @@ export function Grid(props: GridProps) {
                 const isSelected = address === selected
                 const isEditingHere = editing?.address === address
                 const error = isError(value) ? value.error : null
-                const tint = precedents.has(address)
-                  ? 'bg-sky-100/70'
-                  : dependents.has(address)
-                    ? 'bg-amber-100/70'
-                    : 'bg-white'
+                // Errors win over trace tints; plain cells get a subtle row hover.
+                const tint = error
+                  ? 'bg-red-50'
+                  : precedents.has(address)
+                    ? 'bg-blue-100/60'
+                    : dependents.has(address)
+                      ? 'bg-amber-100/60'
+                      : 'bg-white group-hover:bg-slate-50'
 
                 return (
                   <td
@@ -103,10 +110,16 @@ export function Grid(props: GridProps) {
                     onClick={() => props.onSelect(address)}
                     onDoubleClick={() => props.onStartEdit(address)}
                     title={error ? ERROR_HELP[error] : undefined}
-                    className={`relative h-8 cursor-cell border-r border-b border-slate-200 px-2 transition-colors duration-150 touch-manipulation ${tint} ${
+                    className={`relative h-8 cursor-cell border-r border-b border-slate-200/70 px-2 transition-colors duration-150 touch-manipulation ${tint} ${
                       isSelected ? 'z-[5] ring-2 ring-emerald-600 ring-inset' : ''
                     } ${error ? 'font-medium text-red-600' : 'text-slate-800'} ${bold.has(address) ? 'font-semibold' : ''}`}
                   >
+                    {isSelected && !isEditingHere && (
+                      <span
+                        className="absolute -right-[3px] -bottom-[3px] z-[6] h-[7px] w-[7px] border border-white bg-emerald-600"
+                        aria-hidden="true"
+                      />
+                    )}
                     {isEditingHere && editing.source === 'cell' ? (
                       <input
                         autoFocus
