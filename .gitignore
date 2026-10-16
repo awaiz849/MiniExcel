@@ -2,3 +2,9 @@ node_modules
 dist
 .env
 .vercel
+
+# Private hackathon notes
+JUDGE_PREP.md
+judge-qa.md
+PLAYBOOK.md
+prompts.md
