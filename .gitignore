@@ -8,3 +8,11 @@ JUDGE_PREP.md
 judge-qa.md
 PLAYBOOK.md
 prompts.md
+
+# AI / agent config
+.claude/
+CLAUDE.md
+AGENTS.md
+.cursor/
+.cursorrules
+.mcp.json
